@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: app.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: app.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>/**
+ * @description Clase principal de la aplicacion
+ * @file app.js
+ * @license GPL3 
+ * @author Manuel Solís Gómez(masogo008@gmail.com), Daniel Nuñez Santiago, Genaro Salas Galindo y Julio Ramos Gago
+ */
+
+/**
+* Esta clase es el controlador de nuestra aplicacion 
+*/
+class App
+{
+    /**
+     * El constructor declarara la vista, el modelo, el animador y el boton que permitira iniciar el juego
+     */
+    constructor()
+    {
+        this.vista = new Vista(this); // Clase referente a todo el apartado visual de la aplicacion
+        this.modelo = new Modelo(); // Clase referente a todos los datos de la aplicacion
+        this.animador = null; // Creamos el animador
+
+        // Centramos el boton de juego
+        this.botonJuego = document.getElementById('juego');
+        this.botonJuego.style.left = (document.getElementById('ventanaJuego').clientWidth/2 - this.botonJuego.clientWidth/2)+'px';
+        this.botonJuego.style.top = (document.getElementById('ventanaJuego').clientHeight/2 - this.botonJuego.clientHeight/2)+'px';
+        this.botonJuego.onclick= this.iniciar.bind(this); //Clase destinada a iniciar el juego
+    }
+    iniciar()
+    {
+        this.botonJuego.remove(); //borramos el boton de jugar
+
+        this.modelo.nivel = parseInt(document.getElementById('niveles').value); // Colocamos el nivel en el modelo
+        this.modelo.cantidadBolas = this.cantNivel();
+        this.vidaNivel();
+        this.vista.vida(this.modelo.vida); //Muestra la puntuacion
+
+        this.vista.generarBolas(this.modelo.cantidadBolas); //Llamamos a generar las bolas, podriamos llamarlo si clica algun boton
+        this.animador = window.setInterval(this.vista.moverBolas.bind(this.vista), 200); // nuestra animador llamara cada cierto intervalo de tiempo a la funcion de movimiento, el animador pertenece al controlador y verlas moviendose a la vista
+        
+        document.getElementById('acabarJuego').onclick = this.finPrograma.bind(this);//Colocamos el evento que llama al metodo de fin de programa;
+    }
+    vidaNivel()
+    {
+        this.modelo.vida -= (this.modelo.nivel-1) * 10;
+    }
+    cantNivel()
+    {
+        return this.modelo.nivel * this.modelo.cantidadBolas;
+    }
+    verificar(evento)
+    {
+        let bola = evento.target //tomamos el elemento bola buscado
+        let textoBola = bola.childNodes[0].nodeValue; //Saca el nodo de texto de la bola, es decir el numero a coparar si el multiplo
+        let multiplo = document.getElementById('numeroAside'); //tomamos el elemento numeroAside que tiene el multiplo
+        let textMultiplo = multiplo.childNodes[0].nodeValue; //Saca el nodo de texto de multiplo
+
+        const sonFallo = new Audio('sound/error.wav');//Audio declarado
+
+        if (textoBola % textMultiplo == 0)
+        {
+            this.vista.cambiarClase(bola,'bolaAcertada');
+            this.vista.destruirBola(bola);
+        }
+        else
+        {
+            this.vista.cambiarClase(bola,'bolaError');
+            this.vista.puntuarVida(-10);
+
+            sonFallo.play();
+        }
+    }
+    finPrograma()
+    {
+        let bolas = document.querySelectorAll('.bola'); //tomamos todos los div de las bolas
+        let bolasMal = document.querySelectorAll('.bolaError'); //tomamos todos los div de las bolas que ya han dado error
+        let multiplo = document.getElementById('numeroAside'); //tomamos el elemento numeroAside que tiene el multiplo
+        let textMultiplo = multiplo.childNodes[0].nodeValue; //Saca el nodo de texto de multiplo
+        let multiplica = false; //Variable para controlar si algun multiplo da 0
+
+        for (let indice = 0; indice &lt; bolas.length &amp;&amp; multiplica==false; indice++) //For para pasar por cada una de las div de las bolas y mientras no hay multiplicacion con resto 0
+        {
+            let textoBola = bolas[indice].childNodes[0].nodeValue; //Saca el nodo de texto de la bola, es decir el numero a coparar si el multiplo
+            if (textoBola % textMultiplo == 0) 
+            {
+                multiplica = true; //Nos dice que ha multiplicado alguno
+            }
+        }
+
+        for (let indice = 0; indice &lt; bolas.length; indice++) //Eliminamos las bolas que no han sido probadas
+        {
+            bolas[indice].remove();
+        }
+
+        for (let indice = 0; indice &lt; bolasMal.length; indice++) //Eliminamos las bolas de error
+        {
+            bolasMal[indice].remove();
+        }
+
+        document.getElementsByTagName('audio')[0].remove();
+
+        if (!multiplica &amp;&amp; document.getElementById('puntuacion').children[1].textContent > 0)
+        {
+            this.vista.ganador(); //si no existe multiplo nos llevara a que la vista nos enseñe que ganamos
+            this.puntuacionFinal(this.modelo.vida * this.modelo.nivel,false);
+        }
+        else
+        {
+            this.vista.perdedor(); //si existe multiplo nos llevara a que la vista nos enseñe que hemos perdido
+            this.puntuacionFinal('',true);
+        }
+        this.volverJugar();
+    }
+    volverJugar()
+    {
+        //llamamos que la vista cree el boton
+        this.vista.generarBoton('VOLVER A JUEGAR','otraVez').onclick = this.recargar.bind(this);
+
+        //borramos el boton de fin de juego
+        document.getElementById('acabarJuego').remove();
+    }
+    puntuacionFinal(puntuacion,tiempo=false)
+    {
+        let fecha = new Date(); //Fecha actual
+        if (tiempo) 
+        {
+            fecha.setDate(fecha.getDate()-100);
+            document.cookie = 'puntuacion='+puntuacion+';expires='+fecha;
+        } 
+        else 
+        {
+            document.cookie = `puntuacion=${puntuacion}`;
+        }
+    }
+    recargar()
+    {
+        location.reload(); //Recargar la pagina
+    }
+}
+/**
+ * Clase destinada a la parte visual del programa, el se encargara de mostrar o crear elementos
+ */
+class Vista
+{
+    constructor(controlador)
+    {
+        this.controlador = controlador;
+        this.elementoPuntuacion = document.getElementById('puntuacion').children[1];
+        document.getElementById('numeroAside').appendChild(document.createTextNode((Math.floor(Math.random() * (10 - 2)) + 2))); //
+        this.contenedor = document.getElementById('ventanaJuego');
+
+        this.bolas = []; //array que contenga todas las bolas
+    }
+    /**
+     * Crearemos la cantidad de bolas que queremos
+     */
+    generarBolas(cantidadBolas)
+    {
+        for (let indice = 0; indice &lt; cantidadBolas; indice++) //creamo tanto objeto Bola como nos diga el modelo
+        {
+            let bola = new Bola(this.contenedor,this.controlador) //creamos el objeto
+            this.bolas.push(bola) //añadimos al array de bolas cada objeto bola
+            this.contenedor.appendChild(bola.div); //le añadimos la bola al contenedor
+        }
+    }
+    /**
+     * Crearemos el boton que queramos
+     */
+     generarBoton(nodo,id)
+     {
+        let boton = document.createElement('button');
+        boton.appendChild(document.createTextNode(nodo));
+        boton.id = id;
+        document.getElementsByTagName('main')[0].appendChild(boton);
+
+        return boton;
+     }
+    /**
+     * Moveremos la bola cada intervalo pedido por el controlador
+     */
+    moverBolas()
+    {
+        for (let indice = 0; indice &lt; this.bolas.length; indice++)
+        {
+            let bola = this.bolas[indice]; //tomamos cada objeto bola que contenrra su estructura y velocidad
+            let top = parseFloat(bola.div.style.top.substr(0,(bola.div.style.top.length-2))); // tomamos el top del elemento, ademas de quitarle de su cadena px y pasarlo a numero
+            let left = parseFloat(bola.div.style.left.substr(0,(bola.div.style.left.length-2))); //tomamos el left del elemento, ademas de quitarle de su cadena px y pasarlo a numero
+            //Si llega a los bordes se aplica algunos de estos if
+            if (top &lt;= 0 || top >= this.contenedor.clientHeight -bola.div.clientHeight ) //le restamos el tamaño de la bola para que coincida con el tamaño del contenedor
+            {
+                this.bolas[indice].velocidady = -this.bolas[indice].velocidady //modificamos el signo de la velocidad si tocan los bordes
+            }
+            if (left &lt;= 0 || left >= this.contenedor.clientWidth -bola.div.clientWidth ) //le restamos el tamaño de la bola para que coincida con el tamaño del contenedor
+            {
+                this.bolas[indice].velocidadx = -this.bolas[indice].velocidadx //modificamos el signo de la velocidad si tocan los bordes
+            }
+            //una vez cambiamos los signos de velocidas le aplicamos la velocidad, tenemos que cambiar directamente los valores del objeto bola
+            this.bolas[indice].div.style.top = (top+this.bolas[indice].velocidady) +'px'; // bolatop = 240 + 13 + 'px'   bolatop = '253px'
+            this.bolas[indice].div.style.left = (left+this.bolas[indice].velocidadx) +'px';
+        }
+    }
+    cambiarClase(elemento,nombreClase)
+    {
+        elemento.classList.remove('bola');
+        elemento.classList.add(nombreClase);
+    }
+    puntuarVida(punto)
+    {
+        this.elementoPuntuacion.textContent = `${parseInt(this.elementoPuntuacion.textContent)+punto}`;
+        this.controlador.modelo.vida = parseInt(this.elementoPuntuacion.textContent);
+    }
+    vida(punto)
+    {
+        this.elementoPuntuacion.appendChild(document.createTextNode(punto));
+    }
+    destruirBola(bolaTarget) 
+    {
+        let bola = bolaTarget // recibe la bola seleccionada
+        let left = bola.style.left; //toma la posicion de la bola
+        let top = bola.style.top 
+        let ancho = bola.clientWidth; //toma el tamaño de la bola 
+        let alto = bola.clientHeight; 
+        bola.remove();
+
+        let img = document.createElement('img'); //Crea la imagen aplicando la posicion que tenia la bola y el tamaño
+        img.src = 'img/explosion1.gif';
+        img.style.top=top;
+        img.style.left=left;
+        img.style.width = ancho*1.5 +'px'; //Le aplicamos un 1.5 del tamaño de la bola para que sea mas visual
+        img.style.height = alto*1.5 +'px';
+        this.contenedor.appendChild(img);
+
+        const sonExplo = new Audio('sound/explosion.wav'); //Audio declarado
+        sonExplo.play(); //Play audio
+        
+        setTimeout(()=>{img.remove()}, 750) //elimina la animación cuando completa un ciclo
+    }
+    ganador()
+    {
+        this.contenedor.id='ganar'; //Cambiamos su id para cambiar su estilo a cuando gana, tambien cambiara el this.contenedor
+        let mensaje = document.createElement('h2'); //Creamos el elemento del resultado
+        mensaje.appendChild(document.createTextNode('GANASTE'));//Añade un text nodo del resultado
+        mensaje.style.fontSize = this.contenedor.clientHeight/8 + 'px';
+        this.contenedor.appendChild(mensaje);//Añade el mensaje al contenedor
+        mensaje.style.top = (this.contenedor.clientHeight/2)-(mensaje.clientHeight/2) + 'px'; //Colocamos las medidas por defecto de los div en top, le restamos la mitad de su tamaño
+        mensaje.style.left = (this.contenedor.clientWidth/2)-(mensaje.clientWidth/2)  + 'px';//Colocamos las medidas por defecto de los div en left, le restamos la mitad de su tamaño
+    
+        const sonGanar = new Audio('sound/victoria.wav'); //Audio declarado
+        sonGanar.play(); //Play audio
+    }
+    perdedor()
+    {
+        this.contenedor.id='perder'; //Cambiamos su id para cambiar su estilo a cuando pierde, tambien cambiara el this.contenedor
+        let mensaje = document.createElement('h2'); //Creamos el elemento del resultado
+        mensaje.appendChild(document.createTextNode('PERDISTE'));//Añade un text nodo del resultado
+        mensaje.style.fontSize = this.contenedor.clientHeight/8 + 'px';
+        this.contenedor.appendChild(mensaje);//Añade el mensaje al contenedor
+        mensaje.style.top = (this.contenedor.clientHeight/2)-(mensaje.clientHeight/2) + 'px'; //Colocamos las medidas por defecto de los div en top, le restamos la mitad de su tamaño
+        mensaje.style.left = (this.contenedor.clientWidth/2)-(mensaje.clientWidth/2)  + 'px';//Colocamos las medidas por defecto de los div en left, le restamos la mitad de su tamaño
+    
+        const sonPerder = new Audio('sound/derrota.wav'); //Audio declarado
+        sonPerder.play(); //Play audio
+    }
+}
+/**
+ * Clase destinada a guardar los datos de la aplicacion
+ */
+class Modelo
+{
+    /**
+     * Inicializamos los atributos que contendran los datos del programa
+     */
+    constructor()
+    {
+        this.cantidadBolas = 8;
+        this.vida = 100;
+        this.nivel = 1;
+    }
+}
+class Bola
+{
+    constructor(contenedor,controlador)
+    {
+        this.controlador=controlador;
+        this.velocidadx =  Math.floor (Math.random () * 51) -25;
+        this.velocidady =  Math.floor (Math.random () * 51) -25;
+        this.div = document.createElement('div');
+        this.div.appendChild(document.createTextNode((Math.floor(Math.random() * (App.limiteNumero - 2)) + 2)));
+        this.cambiarClase('bola');
+        //Cada vez que se cree una bola se generara en el centro
+        this.div.style.top = (contenedor.clientHeight/2) + 'px'; //Colocamos las medidas por defecto de los div en top
+        this.div.style.left = (contenedor.clientWidth/2) + 'px';//Colocamos las medidas por defecto de los div en left
+        this.div.onclick = this.controlador.verificar.bind(this.controlador); // this.pulsar.bind(this)
+    }
+
+    cambiarClase(nombreClase)
+    {
+        this.div.classList.add(nombreClase);
+    }
+}
+App.limiteNumero = 50; //atributo estatico
+let controlador = new App();
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="App.html">App</a></li><li><a href="Bola.html">Bola</a></li><li><a href="Modelo.html">Modelo</a></li><li><a href="Vista.html">Vista</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.7</a> on Tue Dec 14 2021 11:43:44 GMT+0100 (hora estándar de Europa central)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>
